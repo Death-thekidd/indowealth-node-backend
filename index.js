@@ -8,6 +8,15 @@ const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const sanityClient = require("@sanity/client");
+
+const client = sanityClient({
+	projectId: "s9bsao5g",
+	dataset: "production",
+	apiVersion: "2024-08-23",
+	useCdn: true,
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
