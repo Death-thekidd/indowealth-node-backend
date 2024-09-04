@@ -14,23 +14,31 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // Serve PDF file with filestream
-app.get("/download/:filename", (req, res) => {
-	const filename = req.params.filename;
-	const filePath = path.join(__dirname, "assets", filename);
+app.get("/download/:name", async (req, res) => {
+	const name = req.params.name;
 
-	if (fs.existsSync(filePath)) {
-		const fileStream = fs.createReadStream(filePath);
-		res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
-		res.setHeader("Content-Type", "application/pdf");
-		fileStream.pipe(res);
-	} else {
-		res.status(404).send("File not found");
+	try {
+		const document = await client.fetch(
+			`*[_type == "document" && name == $name][0]`,
+			{ name }
+		);
+
+		if (!document || !document.file || !document.file.asset) {
+			return res.status(404).send("File not found");
+		}
+
+		const fileUrl = document.file.asset.url;
+
+		// Redirect to the Sanity CDN file URL
+		res.redirect(fileUrl);
+	} catch (error) {
+		res.status(500).send("Error fetching document");
 	}
 });
 
 // Contact form endpoint
 app.post("/contact", (req, res) => {
-	const { name, email, message } = req.body;
+	const { fname, lname, email, message } = req.body;
 
 	const transporter = nodemailer.createTransport({
 		host: process.env.SMTP_HOST,
@@ -45,7 +53,7 @@ app.post("/contact", (req, res) => {
 	const mailOptions = {
 		from: email,
 		to: "admin@indowealth.group", // replace with your receiving email
-		subject: `Contact form submission from ${name}`,
+		subject: `Contact form submission from ${fname} ${lname}`,
 		text: message,
 	};
 
