@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 const sanityClient = require("@sanity/client");
 
-const client = sanityClient({
+const client = sanityClient.createClient({
 	projectId: "s9bsao5g",
 	dataset: "production",
 	apiVersion: "2024-08-23",
@@ -27,20 +27,21 @@ app.get("/download/:name", async (req, res) => {
 	const name = req.params.name;
 
 	try {
+		// Fetch document with the file field
 		const document = await client.fetch(
-			`*[_type == "document" && name == $name][0]`,
+			`*[_type == "documentation" && name == $name][0]{name, "fileUrl": file.asset->url}`,
 			{ name }
 		);
 
-		if (!document || !document.file || !document.file.asset) {
+		// Check if the document and the file URL exist
+		if (!document || !document.fileUrl) {
 			return res.status(404).send("File not found");
 		}
 
-		const fileUrl = document.file.asset.url;
-
-		// Redirect to the Sanity CDN file URL
-		res.redirect(fileUrl);
+		// Redirect to the file on Sanity's CDN
+		res.redirect(document.fileUrl);
 	} catch (error) {
+		console.error("Error fetching document:", error);
 		res.status(500).send("Error fetching document");
 	}
 });
